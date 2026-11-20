@@ -1,0 +1,18 @@
+# Build-Ausgabe
+*.exe
+build/
+*.obj
+*.o
+*.res
+*.pdb
+*.ilk
+*.part*
+
+# lokale Notizen
+KONTEXT_KlimaxCompression.txt
+
+# Editor / System
+.vscode/
+.vs/
+Thumbs.db
+desktop.ini
