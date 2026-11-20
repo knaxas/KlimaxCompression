@@ -233,7 +233,19 @@ static std::vector<SegPlan> mapSegments(const std::vector<Entry>& ents, const st
   return segs;
 }
 
+#ifdef __EMSCRIPTEN__
+static Progress* gInlineProg = nullptr;
+static std::atomic<U64>* gInlineDone = nullptr;
+static U64 gInlineBase = 0;
+static void inlinePump() { if (gInlineProg) { gInlineProg->done = gInlineBase + gInlineDone->load(); gInlineProg->tick(false); } }
+#else
+static inline void inlinePump() {}
+#endif
+
 static int hwThreads() {
+#ifdef __EMSCRIPTEN__
+  return 1;
+#endif
   unsigned hw = std::thread::hardware_concurrency();
   return (int)std::max(1u, std::min(hw ? hw : 2u, 64u));
 }
@@ -295,7 +307,7 @@ static void compressSegment(SegJob& job, const std::vector<Entry>& ents, std::at
         for (size_t k = 0; k < fin; k += 65536) {
           size_t c = std::min<size_t>(65536, fin - k);
           enc->write(io.data() + k, c);
-          done += c; if (stop) throw CKCancelled();
+          done += c; inlinePump(); if (stop) throw CKCancelled();
         }
         memmove(io.data(), io.data() + fin, have - fin); have -= fin; base += fin;
       }
@@ -313,6 +325,12 @@ static void compressSegment(SegJob& job, const std::vector<Entry>& ents, std::at
 template <class Job>
 static void runParallel(std::vector<Job>& jobs, std::function<void(Job&)> fn, std::atomic<U64>& done, std::atomic<bool>& stop,
                         Progress& prog, U64 base, int maxPar) {
+#ifdef __EMSCRIPTEN__
+  (void)maxPar;
+  gInlineProg = &prog; gInlineDone = &done; gInlineBase = base;
+  for (auto& j : jobs) if (!stop) fn(j);
+  gInlineProg = nullptr; gInlineDone = nullptr;
+#else
   std::atomic<int> finished{0}, next{0};
   std::vector<std::thread> th;
   int nth = std::max(1, std::min(maxPar, (int)jobs.size()));
@@ -333,6 +351,7 @@ static void runParallel(std::vector<Job>& jobs, std::function<void(Job&)> fn, st
   }
   for (auto& t : th) t.join();
   if (cancelled) throw CKCancelled();
+#endif
   std::exception_ptr cancel;
   for (auto& j : jobs) if (j.err) {
     try { std::rethrow_exception(j.err); } catch (const CKCancelled&) { if (!cancel) cancel = j.err; }
@@ -396,7 +415,7 @@ CompressResult compressPath(fs::path input, const fs::path& outFile, Progress& p
           s.crc = crcUpdate(s.crc, io.data(), n);
           s.hash = dupHash(s.hash, io.data(), n);
           if (sample.size() < (1 << 18)) sample.insert(sample.end(), io.begin(), io.begin() + std::min(n, (size_t)(1 << 18) - sample.size()));
-          s.size += n; done += n;
+          s.size += n; done += n; inlinePump();
           if (stop) throw CKCancelled();
         }
         s.highEntropy = entropy0(sample.data(), sample.size()) > 7.97;
@@ -675,7 +694,7 @@ ExtractResult extractArchive(const fs::path& archive, const fs::path& outDir, Pr
         for (U64 r = 0; r < n; r += 65536) {
           size_t c = (size_t)std::min<U64>(65536, n - r);
           dec->read(dst ? dst + r : io.data(), c);
-          done += c; if (stop) throw CKCancelled();
+          done += c; inlinePump(); if (stop) throw CKCancelled();
         }
       };
       for (size_t q = 0; q <= jobLast[ji]; q++) {

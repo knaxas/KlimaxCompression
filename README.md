@@ -47,6 +47,24 @@ auch die Dateinamen. Danach erscheint ein zufällig erzeugtes Passwort wie `K7RX
 * Groß/klein und Striche sind beim Eintippen egal. „Geheim“ ist nach jedem Start wieder aus.
 * Beim Ansehen eines Archivs liegt eine entschlüsselte Kopie in `%TEMP%`, die beim Schließen gelöscht wird.
 
+## Im Browser
+
+Der Ordner `web/` enthält Klimax Compression als Webseite. Es ist **dieselbe C++-Engine**, nach WebAssembly
+übersetzt, mit demselben `.kc`-Format. Archive aus dem Browser öffnet die App und umgekehrt, auch verschlüsselte.
+
+* `web/index.html` per Doppelklick öffnen oder den Ordner auf einen Webserver legen (z. B. GitHub Pages).
+* **Packen:** Dateien oder Ordner reinziehen, Modus und Geheim wählen, `.kc` herunterladen.
+* **Entpacken:** `.kc` reinziehen (bei Geheim nach dem Passwort gefragt), dann einzelne Dateien
+  herunterladen, alles als ZIP holen oder (in Chrome/Edge) direkt in einen Ordner speichern.
+* Alles läuft lokal im Browser, es wird nichts hochgeladen. Geheim nutzt WebCrypto (AES-256-GCM, PBKDF2).
+* Grenzen der Web-Version: höchstens **300 MB** pro Packen/Entpacken (beim Entpacken zählt die entpackte Größe)
+  und **3 Nutzungen pro Tag**. Gezählt wird lokal im Browser (localStorage + Cookie), also eine weiche Sperre.
+  Ohne Grenzen geht's mit der Desktop-App, die Seite verlinkt darauf.
+* Der Browser nutzt nur einen Kern, Maximal ist dort also deutlich langsamer (etwa 0,5 MB/s).
+
+Die Engine `web/kc_engine.js` wird mit [Emscripten](https://emscripten.org) gebaut: einmalig installieren
+(siehe `web/build_wasm.bat`), dann `web\build_wasm.bat` ausführen.
+
 ## Installieren
 
 Im Hauptfenster auf **Installieren** klicken. Das Programm wird nach
@@ -143,6 +161,10 @@ g++ -O3 -march=native -std=c++17 -pthread -o kc src/main.cpp src/core.cpp src/ar
 | `src/ui_main.cpp` | Hauptfenster |
 | `src/ui_viewer.cpp` | Archivansicht |
 | `src/ui_secret.cpp` | Passwort-Fenster |
+| `src/wasm_api.cpp` | Schnittstelle der Engine für den Browser (WebAssembly) |
+| `web/index.html` | Browser-Version (Packen und Entpacken) |
+| `web/kc_engine.js` | die nach WebAssembly übersetzte Engine (wird gebaut) |
+| `web/src/`, `web/build_wasm.bat` | Worker-Code (Dateien, WebCrypto, ZIP) und Build-Skript |
 | `third_party/zstd/` | zstd 1.5.6 |
 | `ck.rc`, `*.ico`, `app.manifest` | Icons, Versionsinfo, Windows-Manifest |
 | `build.bat`, `.github/workflows/` | Build lokal und auf GitHub |

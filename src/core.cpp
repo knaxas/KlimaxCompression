@@ -68,7 +68,7 @@ void getMeta(const fs::path& p, U64& mtime, U32& attr) {
   struct stat st;
   if (stat(p.c_str(), &st) == 0) {
     mtime = ((U64)st.st_mtim.tv_sec + 11644473600ull) * 10000000ull + (U64)st.st_mtim.tv_nsec / 100;
-    attr = st.st_mode & 07777;
+    attr = (st.st_mode & S_IWUSR) ? 0 : 1;
   }
 #endif
 }
@@ -91,8 +91,10 @@ void setMeta(const fs::path& p, U64 mtime, U32 attr, bool isDir) {
     ts[0].tv_sec = ts[1].tv_sec = t; ts[0].tv_nsec = ts[1].tv_nsec = (long)((mtime % 10000000ull) * 100);
     utimensat(AT_FDCWD, p.c_str(), ts, 0);
   }
-  if (attr) chmod(p.c_str(), attr & 07777);
-  (void)isDir;
+  if (!isDir && (attr & 1)) {
+    struct stat st;
+    if (stat(p.c_str(), &st) == 0) chmod(p.c_str(), st.st_mode & 07777 & ~0222);
+  }
 #endif
 }
 
@@ -115,7 +117,9 @@ fs::path uniquePath(const fs::path& p) {
 }
 
 U64 availableMemory() {
-#ifdef _WIN32
+#if defined(__EMSCRIPTEN__)
+  return 1ull << 30;
+#elif defined(_WIN32)
   MEMORYSTATUSEX ms = {}; ms.dwLength = sizeof(ms);
   return GlobalMemoryStatusEx(&ms) ? (U64)ms.ullAvailPhys : 0;
 #else

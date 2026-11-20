@@ -13,6 +13,7 @@
 #include <functional>
 #include <unordered_map>
 #include <stdexcept>
+#include <exception>
 #include <atomic>
 #include <chrono>
 #include <filesystem>

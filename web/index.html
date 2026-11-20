@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klimax Compression</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='16' y='26' font-size='28' text-anchor='middle' fill='%23c7a462'%3E%E2%99%9B%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #151412; --surface: #1e1d1a; --surface-hi: #282622; --line: #36332e; --line-hi: #565148;
+    --gold: #c7a462; --gold-hi: #d6b575; --gold-down: #ac8c52; --on-gold: #1c1811;
+    --text: #e9e4da; --dim: #969084; --faint: #68635a; --error: #c96254;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 28px 24px 40px; }
+  header { display: flex; align-items: center; gap: 14px; padding-bottom: 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .crown { color: var(--gold); font-size: 30px; line-height: 1; }
+  h1 { font: 400 26px Georgia, "Times New Roman", serif; margin: 0; letter-spacing: .2px; }
+  .hright { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .usage { color: var(--faint); font-size: 12px; }
+  .usage.out { color: var(--error); }
+  a.applink { color: var(--gold); text-decoration: none; font-size: 13px; }
+  a.applink:hover { color: var(--gold-hi); text-decoration: underline; }
+  a.btn { display: inline-flex; align-items: center; font: 600 14px "Segoe UI", system-ui, sans-serif; text-decoration: none; border-radius: 6px;
+          padding: 0 16px; height: 34px; background: var(--gold); border: 1px solid var(--gold); color: var(--on-gold); }
+  a.btn:hover { background: var(--gold-hi); border-color: var(--gold-hi); }
+  .tabs { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .tabs button { border: none; border-radius: 0; height: 32px; }
+  .tabs button + button { border-left: 1px solid var(--line); }
+
+  .row { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; flex-wrap: wrap; }
+  .seg { display: flex; gap: 8px; }
+  button { font: 600 14px "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+           border-radius: 6px; padding: 0 16px; height: 34px; cursor: pointer; }
+  button:hover { background: var(--surface); border-color: var(--line-hi); }
+  button:active { background: var(--surface-hi); }
+  button:focus-visible { outline: none; border-color: var(--gold); }
+  button.primary, button.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+  button.primary:hover, button.on:hover { background: var(--gold-hi); border-color: var(--gold-hi); }
+  button.primary:active, button.on:active { background: var(--gold-down); }
+  button:disabled { background: var(--bg); border-color: var(--surface-hi); color: var(--faint); cursor: default; }
+  button.link { background: none; border: none; height: auto; padding: 0; color: var(--gold); font-weight: 400; }
+  button.link:hover { color: var(--gold-hi); text-decoration: underline; }
+  button.small { height: 28px; padding: 0 10px; font-size: 13px; }
+  #modeInfo { color: var(--dim); flex: 1; min-width: 180px; }
+  #secret { margin-left: auto; }
+
+  .zone { border: 1px solid var(--line); background: var(--surface); text-align: center; padding: 34px 20px 26px; cursor: pointer; margin-top: 22px; }
+  .row + .zone { margin-top: 0; }
+  .zone:hover { border-color: var(--line-hi); background: #22201d; }
+  .zone.over { border-color: var(--gold); background: #26231c; }
+  .zone .icon { color: var(--gold); font-size: 34px; line-height: 1; }
+  .zone .t1 { font-size: 17px; font-weight: 600; margin-top: 12px; }
+  .zone .t2 { color: var(--dim); margin-top: 4px; }
+  .zone .t3 { color: var(--faint); font-size: 12px; margin-top: 18px; }
+  .zone.busy { pointer-events: none; opacity: .5; }
+
+  .label { font-size: 11px; font-weight: 600; letter-spacing: 1.4px; color: var(--faint); text-transform: uppercase; }
+  .card { border: 1px solid var(--line); background: var(--surface); margin-top: 18px; }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .card-head .sum { color: var(--dim); margin-left: auto; font-size: 12px; }
+  .otitle { font: 400 17px Georgia, serif; overflow-wrap: anywhere; }
+  ul.items { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow: auto; }
+  ul.items li { display: flex; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  ul.items li:last-child { border-bottom: none; }
+  ul.items li.file { cursor: pointer; }
+  ul.items li.file:hover { background: var(--surface-hi); }
+  ul.items .k { color: var(--gold); width: 16px; text-align: center; flex: none; }
+  ul.items .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  ul.items li.dir .n { color: var(--dim); }
+  ul.items .m { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .card-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .name { display: flex; align-items: center; flex: 1; min-width: 220px; color: var(--dim); gap: 8px; }
+  input.text { flex: 1; min-width: 80px; font: 14px "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--bg);
+               border: 1px solid var(--line); border-radius: 4px; height: 34px; padding: 0 10px; }
+  input.text:focus { outline: none; border-color: var(--gold); }
+  input.mono { font: 600 16px Consolas, "Cascadia Mono", monospace; letter-spacing: .5px; }
+  .name .fixed { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .status { display: flex; gap: 14px; align-items: center; margin-top: 22px; min-height: 34px; }
+  .status .who { font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status .what { color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 3px; background: var(--surface-hi); margin-top: 10px; }
+  .bar > div { height: 100%; width: 0; background: var(--gold); transition: width .25s linear; }
+
+  .pad { padding: 20px; }
+  .pad h2 { font: 400 20px Georgia, serif; margin: 0 0 4px; overflow-wrap: anywhere; }
+  .meta { color: var(--dim); }
+  .acts { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .pw { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .pw p { color: var(--dim); margin: 6px 0 12px; }
+  .code { display: flex; align-items: center; justify-content: center; border: 1px solid var(--gold); background: var(--bg);
+          color: var(--gold-hi); font: 600 22px Consolas, "Cascadia Mono", monospace; letter-spacing: 1px; padding: 14px 10px;
+          user-select: all; overflow-wrap: anywhere; text-align: center; }
+  .hint { color: var(--faint); font-size: 12px; margin-top: 8px; }
+  .err { color: var(--error); }
+  .msg { margin-top: 14px; color: var(--error); }
+  .pwrow { display: flex; gap: 10px; margin-top: 12px; }
+  footer { color: var(--faint); font-size: 12px; margin-top: 30px; border-top: 1px solid var(--line); padding-top: 14px; }
+  [hidden] { display: none !important; }
+  @media (max-width: 600px) {
+    .hright { margin-left: 0; }
+    .seg button { padding: 0 10px; }
+    #secret { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="crown">&#9819;</span>
+    <h1>Klimax Compression</h1>
+    <div class="hright">
+      <span class="usage" id="usage"></span>
+      <a class="applink" id="appLink" target="_blank" rel="noopener">Desktop-App &#8599;</a>
+      <div class="tabs"><button id="tabPack" class="on">Packen</button><button id="tabOpen">Entpacken</button></div>
+    </div>
+  </header>
+
+  <section id="pagePack">
+    <div class="row">
+      <div class="seg" id="modes">
+        <button data-m="0">Schnell</button>
+        <button data-m="1">Ausgewogen</button>
+        <button data-m="2">Maximal</button>
+      </div>
+      <span id="modeInfo"></span>
+      <button id="secret" title="Archiv mit AES-256 verschlüsseln">Geheim</button>
+    </div>
+
+    <div class="zone" id="packZone" tabindex="0">
+      <div class="icon">&#8682;</div>
+      <div class="t1">Dateien oder Ordner hierher ziehen</div>
+      <div class="t2">oder <button class="link" id="pickFilesBtn">Dateien wählen</button> · <button class="link" id="pickDirBtn">Ordner wählen</button></div>
+      <div class="t3">Ergebnis: ein .kc-Archiv zum Herunterladen</div>
+      <input type="file" id="pickFiles" multiple hidden>
+      <input type="file" id="pickDir" webkitdirectory multiple hidden>
+    </div>
+
+    <div class="card" id="sel" hidden>
+      <div class="card-head"><span class="label">Auswahl</span><span class="sum" id="selSum"></span><button class="link" id="clearBtn">Leeren</button></div>
+      <ul class="items" id="selItems"></ul>
+      <div class="card-foot">
+        <label class="name">
+          <span>Archiv</span>
+          <input class="text" id="nameIn" spellcheck="false" autocomplete="off">
+          <span class="fixed" id="nameFixed" hidden></span>
+          <span>.kc</span>
+        </label>
+        <button class="primary" id="packBtn">Packen</button>
+      </div>
+    </div>
+
+    <div class="card pad" id="packResult" hidden>
+      <div class="label">Fertig</div>
+      <h2 id="prName"></h2>
+      <div class="meta" id="prMeta"></div>
+      <div class="pw" id="prPwBox" hidden>
+        <div class="label">Dein Passwort</div>
+        <p>Ohne dieses Passwort lässt sich das Archiv nie wieder öffnen, auch nicht von dir. Es gibt keinen Weg zurück, also gut aufbewahren.</p>
+        <div class="code" id="prPw"></div>
+        <div class="hint">Groß/klein und Striche sind beim Eintippen egal.</div>
+      </div>
+      <div class="acts">
+        <button class="primary" id="prDl">Herunterladen</button>
+        <button id="prCopy" hidden>Passwort kopieren</button>
+        <button id="prAgain">Neues Archiv</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pageOpen" hidden>
+    <div class="zone" id="openZone" tabindex="0">
+      <div class="icon">&#8681;</div>
+      <div class="t1">.kc-Archiv hierher ziehen</div>
+      <div class="t2">oder <button class="link" id="pickKcBtn">Archiv wählen</button></div>
+      <div class="t3">Auch verschlüsselte Archive und Archive aus der Desktop-App</div>
+      <input type="file" id="pickKc" accept=".kc,.ck" hidden>
+    </div>
+
+    <div class="card pad" id="pwCard" hidden>
+      <div class="label">Passwort eingeben</div>
+      <p class="meta" id="pwText"></p>
+      <div class="pwrow">
+        <input class="text mono" id="pwIn" spellcheck="false" autocomplete="off" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX">
+        <button class="primary" id="pwBtn">Öffnen</button>
+      </div>
+    </div>
+
+    <div class="card" id="openResult" hidden>
+      <div class="card-head"><span class="otitle" id="orTitle">Inhalt</span><span class="sum" id="orSum"></span></div>
+      <ul class="items" id="orItems"></ul>
+      <div class="card-foot">
+        <span class="meta" style="flex:1">Klick auf eine Datei lädt sie herunter.</span>
+        <button id="orFolder" hidden>In Ordner speichern</button>
+        <button class="primary" id="orZip">Alles als ZIP</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="card pad" id="limitCard" hidden>
+    <div class="label" id="limitTitle"></div>
+    <p class="meta" id="limitText"></p>
+    <div class="acts">
+      <a class="btn" id="limitApp" target="_blank" rel="noopener">Desktop-App herunterladen</a>
+      <button id="limitClose">Schließen</button>
+    </div>
+  </div>
+
+  <div id="work" hidden>
+    <div class="status">
+      <span class="who" id="who"></span>
+      <span class="what" id="what"></span>
+      <button id="cancelBtn">Abbrechen</button>
+    </div>
+    <div class="bar"><div id="bar"></div></div>
+  </div>
+
+  <div class="msg" id="msg" hidden></div>
+
+  <footer>Läuft komplett in deinem Browser, es wird nichts hochgeladen. Im Browser bis 300 MB und 3 Nutzungen pro Tag; Maximal ist hier langsamer, weil nur ein Kern rechnet.
+    Ohne Grenzen und mit allen Kernen: die <a class="applink" id="footLink" target="_blank" rel="noopener">Desktop-App für Windows</a>. Gleiches .kc-Format.</footer>
+</div>
+
+<script src="kc_engine.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const MODE_NAME = ["Schnell", "Ausgewogen", "Maximal"];
+const MODE_INFO = ["Blitzschnell, kleiner als ZIP", "Kaum langsamer, noch kleiner", "Am kleinsten, dauert Minuten"];
+const BAD = /[\\/:*?"<>|\x00-\x1f]/g;
+const APP_URL = "https://github.com/knaxas/KlimaxCompression";
+const DAILY_LIMIT = 3, MAX_BYTES = 300 * 1024 * 1024;
+["appLink", "limitApp", "footLink"].forEach(id => $(id).href = APP_URL);
+
+function today() { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function usedToday() {
+  const t = today();
+  const parse = s => { try { const o = JSON.parse(s); return o && o.d === t ? Math.max(0, o.n | 0) : 0; } catch (e) { return 0; } };
+  let n = 0;
+  try { n = Math.max(n, parse(localStorage.getItem("kc-usage"))); } catch (e) {}
+  try { const m = document.cookie.match(/(?:^|;\s*)kc_usage=([^;]*)/); if (m) n = Math.max(n, parse(decodeURIComponent(m[1]))); } catch (e) {}
+  return n;
+}
+function countUse() {
+  const s = JSON.stringify({ d: today(), n: usedToday() + 1 });
+  try { localStorage.setItem("kc-usage", s); } catch (e) {}
+  try { document.cookie = "kc_usage=" + encodeURIComponent(s) + "; max-age=172800; path=/; SameSite=Lax"; } catch (e) {}
+  renderUsage();
+}
+function renderUsage() {
+  const left = Math.max(0, DAILY_LIMIT - usedToday());
+  $("usage").textContent = left ? `Heute noch ${left} von ${DAILY_LIMIT}` : "Heute aufgebraucht";
+  $("usage").classList.toggle("out", !left);
+}
+function showLimit(title, text) {
+  $("limitTitle").textContent = title;
+  $("limitText").textContent = text;
+  $("limitCard").hidden = false;
+  $("limitCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function hideLimit() { $("limitCard").hidden = true; }
+$("limitClose").onclick = hideLimit;
+function limitReached() {
+  if (usedToday() < DAILY_LIMIT) return false;
+  showLimit("Für heute aufgebraucht", `Im Browser sind ${DAILY_LIMIT} Nutzungen pro Tag frei, ab Mitternacht geht's weiter. ` +
+                                      "Die Desktop-App für Windows hat keine Grenzen, ist kostenlos und nutzt alle Kerne.");
+  return true;
+}
+function tooBig(what, bytes) {
+  showLimit("Zu groß für den Browser", `${what} hat ${fmtSize(bytes)}, im Browser gehen höchstens ${fmtSize(MAX_BYTES)}. ` +
+                                       "Für größere Datenmengen gibt es die Desktop-App für Windows, ohne Grenzen.");
+}
+
+let mode = 0, secret = false, busy = false, cancelled = false;
+let entries = [], emptyDirs = new Set();
+let packed = null, openFile = null, openList = null, openName = "";
+let worker = null, pending = new Map(), tagSeq = 0;
+let phaseName = "", phaseStart = 0, label = "";
+
+try { const m = parseInt(localStorage.getItem("kc-mode")); if (m >= 0 && m <= 2) mode = m; } catch (e) {}
+
+function fmtSize(b) {
+  const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0, v = b;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return (i === 0 ? String(v) : v.toFixed(v < 10 ? 2 : v < 100 ? 1 : 0)).replace(".", ",") + " " + u[i];
+}
+function fmtTime(s) { return s < 9.95 ? s.toFixed(1).replace(".", ",") + " s" : s < 60 ? Math.round(s) + " s" : Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") + " min"; }
+function fmtPct(a, b) { if (!b) return ""; const p = a * 100 / b; return (p > 0 && p < 0.1 ? "< 0,1" : p.toFixed(1).replace(".", ",")) + " %"; }
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function showMsg(t) { $("msg").textContent = t || ""; $("msg").hidden = !t; }
+function saveBlob(data, name) {
+  const url = URL.createObjectURL(new Blob([data], { type: "application/octet-stream" }));
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+function startWorker() {
+  if (typeof kcEngine !== "function") { showMsg("kc_engine.js fehlt. Bitte die Datei neben index.html legen."); return; }
+  const src = "(" + kcEngine.toString() + ")();";
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+  worker.onmessage = e => onWorker(e.data);
+  worker.onerror = e => { e.preventDefault(); fail("Die Engine ist abgestürzt: " + (e.message || "unbekannter Fehler")); };
+  worker.postMessage({ cmd: "warmup" });
+}
+function restartWorker() {
+  if (worker) worker.terminate();
+  for (const p of pending.values()) p.reject(new Error("Abgebrochen"));
+  pending.clear();
+  openList = null;
+  startWorker();
+}
+
+function onWorker(m) {
+  if (m.type === "progress") return onProgress(m);
+  if (m.type === "ready") return;
+  if (m.type === "packed") return onPacked(m);
+  if (m.type === "needPassword") return onNeedPassword(m);
+  if (m.type === "tooBig") { setBusy(false); $("pwCard").hidden = true; tooBig("Der Inhalt dieses Archivs", m.total); return; }
+  if (m.type === "opened") return onOpened(m);
+  if (m.type === "file") { const p = pending.get(m.tag); if (p) { pending.delete(m.tag); p.resolve(m.data); } return; }
+  if (m.type === "zip") { setBusy(false); saveBlob(m.data, rootName() + ".zip"); return; }
+  if (m.type === "error") {
+    for (const p of pending.values()) p.reject(new Error(m.message));
+    pending.clear();
+    fail(m.message);
+  }
+}
+function fail(text) {
+  setBusy(false);
+  showMsg(text);
+}
+
+function onProgress(m) {
+  if (cancelled) return;
+  if (m.phase !== phaseName) { phaseName = m.phase; phaseStart = performance.now(); }
+  let what = m.phase + "  " + fmtSize(m.done) + " von " + fmtSize(m.total);
+  const el = (performance.now() - phaseStart) / 1000;
+  if (m.done > 0 && el > 1 && m.total > m.done) {
+    const sp = m.done / el;
+    what += "   ·   " + fmtSize(sp) + "/s   ·   noch ca. " + fmtTime((m.total - m.done) / Math.max(1, sp));
+  }
+  setStatus(label, what, m.total ? m.done / m.total : 0);
+}
+
+function setBusy(b, who) {
+  busy = b;
+  if (b) { cancelled = false; label = who || ""; phaseName = ""; setStatus(label, "Wird vorbereitet …", 0); }
+  document.querySelectorAll(".zone").forEach(z => z.classList.toggle("busy", b));
+  ["packBtn", "clearBtn", "pwBtn", "orZip", "orFolder", "tabPack", "tabOpen", "secret"].forEach(id => $(id).disabled = b);
+  document.querySelectorAll("#modes button").forEach(x => x.disabled = b);
+  $("work").hidden = !b;
+}
+function setStatus(who, what, frac) {
+  $("who").textContent = who; $("what").textContent = what;
+  $("bar").style.width = Math.max(0, Math.min(100, frac * 100)).toFixed(1) + "%";
+}
+$("cancelBtn").onclick = () => {
+  if (!busy) return;
+  cancelled = true;
+  restartWorker();
+  setBusy(false);
+  showMsg("Abgebrochen.");
+};
+
+function showTab(open) {
+  $("pagePack").hidden = open; $("pageOpen").hidden = !open;
+  $("tabPack").classList.toggle("on", !open); $("tabOpen").classList.toggle("on", open);
+  showMsg("");
+}
+$("tabPack").onclick = () => { if (!busy) showTab(false); };
+$("tabOpen").onclick = () => { if (!busy) showTab(true); };
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", +b.dataset.m === m));
+  $("modeInfo").textContent = MODE_INFO[m];
+  try { localStorage.setItem("kc-mode", m); } catch (e) {}
+}
+document.querySelectorAll("#modes button").forEach(b => b.onclick = () => { if (!busy) setMode(+b.dataset.m); });
+$("secret").onclick = () => { if (busy) return; secret = !secret; $("secret").classList.toggle("on", secret); };
+setMode(mode);
+
+function readAllEntries(reader) {
+  return new Promise((res, rej) => {
+    const all = [];
+    const next = () => reader.readEntries(b => { if (!b.length) res(all); else { all.push(...b); next(); } }, rej);
+    next();
+  });
+}
+async function walk(entry, base, out, dirs) {
+  const path = base + entry.name;
+  if (entry.isFile) out.push({ file: await new Promise((res, rej) => entry.file(res, rej)), path });
+  else if (entry.isDirectory) {
+    const kids = await readAllEntries(entry.createReader());
+    if (!kids.length) dirs.add(path);
+    for (const k of kids) await walk(k, path + "/", out, dirs);
+  }
+}
+async function dropped(e) {
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  const out = [], dirs = new Set();
+  if (items.length) { for (const it of items) await walk(it, "", out, dirs); }
+  else for (const f of e.dataTransfer.files) out.push({ file: f, path: f.name });
+  return { out, dirs };
+}
+function makeZone(zone, onDrop, onClick) {
+  ["dragenter", "dragover"].forEach(t => zone.addEventListener(t, e => { e.preventDefault(); if (!busy) zone.classList.add("over"); }));
+  zone.addEventListener("dragleave", e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove("over"); });
+  zone.addEventListener("drop", async e => { e.preventDefault(); zone.classList.remove("over"); if (busy) return; showMsg(""); try { await onDrop(e); } catch (err) { showMsg("Konnte nicht alles lesen: " + err.message); } });
+  zone.addEventListener("click", e => { if (e.target.tagName !== "BUTTON" && !busy) onClick(); });
+  zone.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !busy) { e.preventDefault(); onClick(); } });
+}
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+makeZone($("packZone"), async e => { const { out, dirs } = await dropped(e); addEntries(out, dirs); }, () => $("pickFiles").click());
+$("pickFilesBtn").onclick = e => { e.stopPropagation(); if (!busy) $("pickFiles").click(); };
+$("pickDirBtn").onclick = e => { e.stopPropagation(); if (!busy) $("pickDir").click(); };
+$("pickFiles").onchange = e => { addEntries([...e.target.files].map(f => ({ file: f, path: f.name })), []); e.target.value = ""; };
+$("pickDir").onchange = e => { addEntries([...e.target.files].map(f => ({ file: f, path: f.webkitRelativePath || f.name })), []); e.target.value = ""; };
+$("clearBtn").onclick = () => { if (busy) return; entries = []; emptyDirs = new Set(); renderSel(); };
+
+function addEntries(list, dirs) {
+  $("packResult").hidden = true;
+  const have = new Set(entries.map(e => e.path));
+  for (const e of list) if (!have.has(e.path)) { entries.push(e); have.add(e.path); }
+  for (const d of dirs) emptyDirs.add(d);
+  renderSel();
+}
+function tops() {
+  const m = new Map();
+  const add = (top, isDir, size, files) => {
+    const t = m.get(top) || { name: top, dir: false, size: 0, files: 0 };
+    t.dir = t.dir || isDir; t.size += size; t.files += files; m.set(top, t);
+  };
+  for (const e of entries) { const i = e.path.indexOf("/"); add(i < 0 ? e.path : e.path.slice(0, i), i >= 0, e.file.size, 1); }
+  for (const d of emptyDirs) { const i = d.indexOf("/"); add(i < 0 ? d : d.slice(0, i), true, 0, 0); }
+  return [...m.values()];
+}
+function renderSel() {
+  const t = tops();
+  $("sel").hidden = t.length === 0;
+  if (!t.length) return;
+  const total = entries.reduce((a, e) => a + e.file.size, 0);
+  $("selSum").innerHTML = esc(entries.length + (entries.length === 1 ? " Datei · " : " Dateien · ") + fmtSize(total)) +
+                          (total > MAX_BYTES ? ` <span class="err">· über ${fmtSize(MAX_BYTES)}</span>` : "");
+  const shown = t.slice(0, 300);
+  $("selItems").innerHTML = shown.map(x =>
+    `<li><span class="k">${x.dir ? "&#9645;" : "&#9643;"}</span><span class="n">${esc(x.name)}</span>` +
+    `<span class="m">${x.dir ? x.files + (x.files === 1 ? " Datei · " : " Dateien · ") : ""}${fmtSize(x.size)}</span></li>`).join("") +
+    (t.length > shown.length ? `<li><span class="k"></span><span class="n">… und ${t.length - shown.length} weitere</span></li>` : "");
+  const single = t.length === 1;
+  $("nameIn").hidden = single; $("nameFixed").hidden = !single;
+  if (single) $("nameFixed").textContent = t[0].name;
+  else if (!$("nameIn").value) $("nameIn").value = "Archiv";
+}
+
+$("packBtn").onclick = () => {
+  if (busy || (!entries.length && !emptyDirs.size)) return;
+  const t = tops();
+  let prefix = "", name = t[0].name;
+  if (t.length > 1) {
+    const n = ($("nameIn").value || "").replace(BAD, "").trim().replace(/^\.+$/, "");
+    if (!n) { showMsg("Bitte einen Namen für das Archiv eingeben."); $("nameIn").focus(); return; }
+    prefix = n + "/"; name = n;
+  }
+  showMsg(""); hideLimit();
+  const total = entries.reduce((a, e) => a + e.file.size, 0);
+  if (total > MAX_BYTES) { tooBig("Deine Auswahl", total); return; }
+  if (limitReached()) return;
+  setBusy(true, name);
+  worker.postMessage({
+    cmd: "pack", mode, secret,
+    files: entries.map(e => ({ path: prefix + e.path, file: e.file })),
+    dirs: [...emptyDirs].map(d => prefix + d)
+  });
+};
+function onPacked(m) {
+  setBusy(false);
+  countUse();
+  packed = m;
+  $("sel").hidden = true;
+  $("packResult").hidden = false;
+  $("prName").textContent = m.name;
+  $("prMeta").textContent = `${fmtSize(m.info.inBytes)}  →  ${fmtSize(m.info.outBytes)}   ·   ${fmtPct(m.info.outBytes, m.info.inBytes)}   ·   ${fmtTime(m.info.seconds)}   ·   ${MODE_NAME[mode]}` +
+                            (m.info.dups ? `   ·   ${m.info.dups} Duplikate` : "") + (m.password ? "   ·   geheim (AES-256)" : "");
+  $("prPwBox").hidden = !m.password; $("prCopy").hidden = !m.password;
+  $("prPw").textContent = m.password || "";
+  $("prCopy").textContent = "Passwort kopieren";
+  $("prAgain").textContent = "Neues Archiv"; delete $("prAgain").dataset.sure;
+}
+$("prDl").onclick = () => { if (packed) saveBlob(packed.data, packed.name); };
+$("prCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("prPw").textContent); $("prCopy").textContent = "Kopiert"; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($("prPw")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+};
+$("prAgain").onclick = () => {
+  if (packed && packed.password && !$("prAgain").dataset.sure) {
+    $("prAgain").dataset.sure = "1"; $("prAgain").textContent = "Passwort gesichert? Nochmal klicken";
+    return;
+  }
+  packed = null; $("packResult").hidden = true; $("prPw").textContent = "";
+  entries = []; emptyDirs = new Set(); $("nameIn").value = ""; renderSel();
+};
+
+makeZone($("openZone"), async e => { const f = e.dataTransfer.files[0]; if (f) openArchive(f); }, () => $("pickKc").click());
+$("pickKcBtn").onclick = e => { e.stopPropagation(); if (!busy) $("pickKc").click(); };
+$("pickKc").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) openArchive(f); };
+
+function openArchive(f, password) {
+  showMsg(""); hideLimit();
+  if (f.size > MAX_BYTES) { tooBig("Das Archiv", f.size); return; }
+  if (limitReached()) return;
+  openFile = f; openName = f.name;
+  $("openResult").hidden = true;
+  if (!password) $("pwCard").hidden = true;
+  setBusy(true, f.name);
+  worker.postMessage({ cmd: "open", file: f, password, maxBytes: MAX_BYTES });
+}
+function onNeedPassword(m) {
+  setBusy(false);
+  $("pwCard").hidden = false;
+  $("pwText").innerHTML = m.wrong ? '<span class="err">Falsches Passwort. Bitte nochmal versuchen.</span>'
+                                  : "„" + esc(openName) + "“ ist verschlüsselt.";
+  $("pwIn").focus(); $("pwIn").select();
+}
+$("pwBtn").onclick = () => {
+  const pw = $("pwIn").value;
+  if (!pw.replace(/[^A-Za-z0-9]/g, "")) { $("pwIn").focus(); return; }
+  if (openFile && !busy) openArchive(openFile, pw);
+};
+$("pwIn").addEventListener("keydown", e => { if (e.key === "Enter") $("pwBtn").click(); });
+
+function rootName() {
+  const first = openList && openList[0];
+  if (openList && openList.length && openList.every(x => x.path.split("/")[0] === first.path.split("/")[0])) return first.path.split("/")[0];
+  return openName.replace(/\.(kc|ck)$/i, "") || "Archiv";
+}
+function onOpened(m) {
+  setBusy(false);
+  countUse();
+  $("pwCard").hidden = true; $("pwIn").value = "";
+  openList = m.list;
+  const files = m.list.filter(x => !x.dir).length;
+  $("orTitle").textContent = openName;
+  $("orSum").textContent = `${files} ${files === 1 ? "Datei" : "Dateien"} · ${fmtSize(m.info.bytes)} · ${m.info.codec}` + (m.info.encrypted ? " · geheim" : "") +
+                           (m.info.crcErrors ? ` · ${m.info.crcErrors} mit CRC-Fehler!` : "");
+  const shown = m.list.slice(0, 3000);
+  $("orItems").innerHTML = shown.map((x, i) => {
+    const depth = x.path.split("/").length - 1, name = x.path.split("/").pop();
+    return `<li class="${x.dir ? "dir" : "file"}" data-i="${i}" style="padding-left:${16 + depth * 18}px">` +
+           `<span class="k">${x.dir ? "&#9662;" : "&#9643;"}</span><span class="n">${esc(name)}</span>` +
+           `<span class="m">${x.dir ? "" : fmtSize(x.size)}</span></li>`;
+  }).join("") + (m.list.length > shown.length ? `<li><span class="k"></span><span class="n">… und ${m.list.length - shown.length} weitere (alle im ZIP)</span></li>` : "");
+  $("orFolder").hidden = typeof window.showDirectoryPicker !== "function";
+  $("openResult").hidden = false;
+  if (m.info.crcErrors) showMsg(m.info.crcErrors + " Datei(en) haben einen CRC-Fehler. Das Archiv ist beschädigt.");
+}
+function getFile(path) {
+  return new Promise((resolve, reject) => {
+    const tag = ++tagSeq;
+    pending.set(tag, { resolve, reject });
+    worker.postMessage({ cmd: "get", path, tag });
+  });
+}
+$("orItems").onclick = async e => {
+  const li = e.target.closest("li.file");
+  if (!li || busy || !openList) return;
+  const it = openList[+li.dataset.i];
+  try { saveBlob(await getFile(it.path), it.path.split("/").pop()); } catch (err) { showMsg(err.message); }
+};
+$("orZip").onclick = () => {
+  if (busy || !openList) return;
+  showMsg("");
+  setBusy(true, rootName() + ".zip");
+  worker.postMessage({ cmd: "zip" });
+};
+$("orFolder").onclick = async () => {
+  if (busy || !openList) return;
+  let dir;
+  try { dir = await window.showDirectoryPicker({ mode: "readwrite" }); } catch (e) { return; }
+  showMsg("");
+  setBusy(true, dir.name);
+  const total = openList.reduce((a, x) => a + x.size, 0);
+  let done = 0;
+  try {
+    for (const it of openList) {
+      if (cancelled) return;
+      const parts = it.path.split("/");
+      let d = dir;
+      for (const p of (it.dir ? parts : parts.slice(0, -1))) d = await d.getDirectoryHandle(p, { create: true });
+      if (!it.dir) {
+        const data = await getFile(it.path);
+        const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
+        const w = await fh.createWritable(); await w.write(data); await w.close();
+        done += it.size;
+        onProgress({ phase: "Speichere", done, total });
+      }
+    }
+    setBusy(false);
+    showMsg("");
+  } catch (err) { if (!cancelled) fail("Speichern fehlgeschlagen: " + err.message); }
+};
+
+renderUsage();
+window.addEventListener("focus", renderUsage);
+window.addEventListener("beforeunload", e => { if (busy || (packed && packed.password)) { e.preventDefault(); e.returnValue = ""; } });
+startWorker();
+</script>
+</body>
+</html>
